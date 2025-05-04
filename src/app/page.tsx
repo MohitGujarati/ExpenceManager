@@ -23,7 +23,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { PlusCircle, Settings } from "lucide-react";
+import { PlusCircle, Settings, Lightbulb } from "lucide-react"; // Added Lightbulb
 import { useBudgetData } from "@/hooks/use-budget-data";
 import { AddTransactionForm } from "@/components/add-transaction-form";
 import { DashboardSummary } from "@/components/dashboard-summary";
@@ -32,6 +32,7 @@ import { SpendingTrendsChart } from "@/components/spending-trends-chart";
 import { TransactionList } from "@/components/transaction-list";
 import { BudgetGoalSettings } from "@/components/budget-goal-settings";
 import { BudgetProgress } from "@/components/budget-progress";
+import { FinancialTips } from "@/components/financial-tips"; // Import FinancialTips
 
 export default function DashboardPage() {
   const {
@@ -114,12 +115,14 @@ export default function DashboardPage() {
             isLoading={!isLoaded}
         />
 
-        {/* Tabs for Overview, Transactions, Budget */}
+        {/* Tabs for Overview, Transactions, Budget, Tips */}
          <Tabs defaultValue="overview">
-            <TabsList className="grid w-full grid-cols-3">
+            {/* Updated grid cols */}
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="transactions">Transactions</TabsTrigger>
               <TabsTrigger value="budget">Budget</TabsTrigger>
+              <TabsTrigger value="tips">Tips</TabsTrigger> {/* New Tips Trigger */}
             </TabsList>
 
              {/* Overview Tab */}
@@ -154,7 +157,6 @@ export default function DashboardPage() {
                        budgetGoals={budgetGoals}
                        expensesByCategory={expensesByCategory}
                      />
-                     {/* Can add BudgetGoalSettings here directly or link to settings */}
                       <Card className="flex flex-col items-center justify-center">
                          <CardHeader>
                              <CardTitle>Manage Goals</CardTitle>
@@ -167,6 +169,18 @@ export default function DashboardPage() {
                          </CardContent>
                      </Card>
                  </div>
+            </TabsContent>
+
+             {/* Tips Tab */}
+            <TabsContent value="tips">
+                <FinancialTips
+                    totalIncome={totalIncome}
+                    totalExpenses={totalExpenses}
+                    expensesByCategory={expensesByCategory}
+                    budgetGoals={budgetGoals}
+                    currentBalance={currentBankBalance}
+                    isLoading={!isLoaded}
+                 />
             </TabsContent>
          </Tabs>
       </main>
