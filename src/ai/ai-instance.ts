@@ -1,14 +1,14 @@
 import {genkit} from 'genkit';
-import { openai } from '@genkit-ai/openai';
+import { googleAI } from '@genkit-ai/googleai'; // Import googleAI plugin
 
 export const ai = genkit({
   promptDir: './prompts',
   plugins: [
-    openai({
-      apiKey: process.env.OPENAI_API_KEY, // Use OPENAI_API_KEY from environment variables
+    googleAI({
+      apiKey: process.env.GOOGLE_API_KEY, // Use GOOGLE_API_KEY from environment variables
     }),
   ],
-  // Set the default model to an OpenAI model (e.g., gpt-3.5-turbo or gpt-4o-mini)
+  // Set the default model to a Gemini model (e.g., gemini-1.5-flash)
   // Adjust the model name as needed based on availability and preference
-  model: 'openai/gpt-4o-mini',
+  model: 'googleai/gemini-1.5-flash',
 });
