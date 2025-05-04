@@ -23,7 +23,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { PlusCircle, Settings, Lightbulb } from "lucide-react"; // Added Lightbulb
+import { PlusCircle, Settings } from "lucide-react";
 import { useBudgetData } from "@/hooks/use-budget-data";
 import { AddTransactionForm } from "@/components/add-transaction-form";
 import { DashboardSummary } from "@/components/dashboard-summary";
@@ -32,7 +32,6 @@ import { SpendingTrendsChart } from "@/components/spending-trends-chart";
 import { TransactionList } from "@/components/transaction-list";
 import { BudgetGoalSettings } from "@/components/budget-goal-settings";
 import { BudgetProgress } from "@/components/budget-progress";
-import { FinancialTips } from "@/components/financial-tips"; // Import FinancialTips
 
 export default function DashboardPage() {
   const {
@@ -115,14 +114,13 @@ export default function DashboardPage() {
             isLoading={!isLoaded}
         />
 
-        {/* Tabs for Overview, Transactions, Budget, Tips */}
+        {/* Tabs for Overview, Transactions, Budget */}
          <Tabs defaultValue="overview">
             {/* Updated grid cols */}
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-3"> {/* Adjusted grid cols back to 3 */}
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="transactions">Transactions</TabsTrigger>
               <TabsTrigger value="budget">Budget</TabsTrigger>
-              <TabsTrigger value="tips">Tips</TabsTrigger> {/* New Tips Trigger */}
             </TabsList>
 
              {/* Overview Tab */}
@@ -171,17 +169,6 @@ export default function DashboardPage() {
                  </div>
             </TabsContent>
 
-             {/* Tips Tab */}
-            <TabsContent value="tips">
-                <FinancialTips
-                    totalIncome={totalIncome}
-                    totalExpenses={totalExpenses}
-                    expensesByCategory={expensesByCategory}
-                    budgetGoals={budgetGoals}
-                    currentBalance={currentBankBalance}
-                    isLoading={!isLoaded}
-                 />
-            </TabsContent>
          </Tabs>
       </main>
     </div>
