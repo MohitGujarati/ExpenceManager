@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -5,13 +6,13 @@
  */
 
 import { genkit } from 'genkit';
-import { googleAI } from '@genkit-ai/googleai';
+import { googleAI } from '@genkit-ai/googleai'; // Import googleAI
 
-// Initialize Genkit with the Google AI plugin
 export const ai = genkit({
   plugins: [
     googleAI({
-      apiKey: process.env.GOOGLE_API_KEY, // Read API key from environment variables
+      // Ensure the API key is read from environment variables
+      apiKey: process.env.GOOGLE_API_KEY,
     }),
   ],
   logLevel: 'debug', // Set log level for detailed debugging info

@@ -23,7 +23,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { PlusCircle, Settings } from "lucide-react";
+import { PlusCircle, Settings, Lightbulb } from "lucide-react";
 import { useBudgetData } from "@/hooks/use-budget-data";
 import { AddTransactionForm } from "@/components/add-transaction-form";
 import { DashboardSummary } from "@/components/dashboard-summary";
@@ -32,13 +32,18 @@ import { SpendingTrendsChart } from "@/components/spending-trends-chart";
 import { TransactionList } from "@/components/transaction-list";
 import { BudgetGoalSettings } from "@/components/budget-goal-settings";
 import { BudgetProgress } from "@/components/budget-progress";
+import { FinancialTipsDisplay } from "@/components/financial-tips-display"; // Import the new component
+import { getFinancialTips } from "@/ai/flows/get-financial-tips-flow"; // Import the AI flow
+import type { GetFinancialTipsInput } from "@/ai/flows/get-financial-tips-flow";
+import { useToast } from "@/hooks/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function DashboardPage() {
   const {
     transactions,
     budgetGoals,
-    startingBalance, // Get starting balance
-    updateStartingBalance, // Get function to update starting balance
+    startingBalance,
+    updateStartingBalance,
     addTransaction,
     deleteTransaction,
     updateBudgetGoal,
@@ -49,9 +54,13 @@ export default function DashboardPage() {
     getCurrentBankBalance,
     isLoaded,
   } = useBudgetData();
+  const { toast } = useToast();
 
   const [isAddTransactionOpen, setIsAddTransactionOpen] = React.useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
+  const [financialTips, setFinancialTips] = React.useState<string | null>(null);
+  const [isTipsLoading, setIsTipsLoading] = React.useState(false);
+  const [activeTab, setActiveTab] = React.useState("overview");
 
   // Memoize calculations to avoid re-computation on every render
   const totalIncome = React.useMemo(() => getTotalIncome(), [getTotalIncome]);
@@ -60,6 +69,63 @@ export default function DashboardPage() {
   const expensesByCategory = React.useMemo(() => getExpensesByCategory(), [getExpensesByCategory]);
   const spendingOverTime = React.useMemo(() => getSpendingOverTime('month'), [getSpendingOverTime]);
 
+  const generateTips = React.useCallback(async () => {
+    if (!isLoaded) return; // Don't generate if data isn't loaded
+
+    setIsTipsLoading(true);
+    setFinancialTips(null); // Clear previous tips
+
+    try {
+        const inputData: GetFinancialTipsInput = {
+            transactions: transactions.map(t => ({ // Simplify transaction data for the prompt
+                type: t.type,
+                description: t.description,
+                amount: t.amount,
+                date: t.date.toISOString().split('T')[0], // Format date as YYYY-MM-DD
+                category: t.type === 'expense' ? getCategoryById(t.categoryId)?.name || 'Other' : 'Income'
+            })),
+            currentBalance: currentBankBalance,
+            monthlyIncome: totalIncome,
+            monthlyExpenses: totalExpenses,
+            budgetGoals: budgetGoals
+                .filter(g => g.amount > 0) // Only include goals with a set amount
+                .map(g => ({
+                    category: getCategoryById(g.categoryId)?.name || g.categoryId,
+                    goalAmount: g.amount
+                })),
+            expensesByCategory: expensesByCategory.map(e => ({
+                category: e.category.name,
+                spentAmount: e.amount
+            })),
+      };
+
+      console.log("Generating tips with input:", inputData); // Log input for debugging
+
+      const tipsResult = await getFinancialTips(inputData);
+      setFinancialTips(tipsResult.tips);
+      console.log("Received tips:", tipsResult.tips); // Log output for debugging
+
+    } catch (error) {
+      console.error("Error generating financial tips:", error);
+      toast({
+        title: "Error Generating Tips",
+        description: "Could not generate financial tips at this time. Please ensure your API key is configured correctly.",
+        variant: "destructive",
+      });
+      setFinancialTips("Sorry, I couldn't generate tips right now. Please try again later."); // Provide user feedback on error
+    } finally {
+      setIsTipsLoading(false);
+    }
+  }, [transactions, currentBankBalance, totalIncome, totalExpenses, budgetGoals, expensesByCategory, isLoaded, toast]);
+
+
+  // Generate tips when the "Tips" tab is activated for the first time
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    if (value === "tips" && !financialTips && !isTipsLoading) {
+      generateTips();
+    }
+  };
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
@@ -114,13 +180,16 @@ export default function DashboardPage() {
             isLoading={!isLoaded}
         />
 
-        {/* Tabs for Overview, Transactions, Budget */}
-         <Tabs defaultValue="overview">
-            {/* Updated grid cols */}
-            <TabsList className="grid w-full grid-cols-3"> {/* Adjusted grid cols back to 3 */}
+        {/* Tabs for Overview, Transactions, Budget, Tips */}
+         <Tabs defaultValue="overview" value={activeTab} onValueChange={handleTabChange}>
+            <TabsList className="grid w-full grid-cols-4"> {/* Adjusted grid cols to 4 */}
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="transactions">Transactions</TabsTrigger>
               <TabsTrigger value="budget">Budget</TabsTrigger>
+              <TabsTrigger value="tips">
+                  <Lightbulb className="mr-1 h-4 w-4" /> {/* Add icon */}
+                 AI Tips
+              </TabsTrigger>
             </TabsList>
 
              {/* Overview Tab */}
@@ -169,8 +238,20 @@ export default function DashboardPage() {
                  </div>
             </TabsContent>
 
+             {/* Tips Tab */}
+             <TabsContent value="tips">
+                <FinancialTipsDisplay
+                  tips={financialTips}
+                  isLoading={isTipsLoading || !isLoaded} // Show loading if AI is loading OR initial data isn't ready
+                  onRegenerate={generateTips}
+                />
+            </TabsContent>
+
          </Tabs>
       </main>
     </div>
   );
 }
+
+// Helper function to get category by ID - needed within this component too
+import { getCategoryById } from "@/lib/categories";
