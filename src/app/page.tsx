@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -36,6 +37,8 @@ export default function DashboardPage() {
   const {
     transactions,
     budgetGoals,
+    startingBalance, // Get starting balance
+    updateStartingBalance, // Get function to update starting balance
     addTransaction,
     deleteTransaction,
     updateBudgetGoal,
@@ -43,8 +46,8 @@ export default function DashboardPage() {
     getTotalExpenses,
     getExpensesByCategory,
     getSpendingOverTime,
-    getCurrentBankBalance, // Get the new function
-    isLoaded, // Use the loading state
+    getCurrentBankBalance,
+    isLoaded,
   } = useBudgetData();
 
   const [isAddTransactionOpen, setIsAddTransactionOpen] = React.useState(false);
@@ -53,9 +56,9 @@ export default function DashboardPage() {
   // Memoize calculations to avoid re-computation on every render
   const totalIncome = React.useMemo(() => getTotalIncome(), [getTotalIncome]);
   const totalExpenses = React.useMemo(() => getTotalExpenses(), [getTotalExpenses]);
-  const currentBankBalance = React.useMemo(() => getCurrentBankBalance(), [getCurrentBankBalance]); // Calculate current balance
+  const currentBankBalance = React.useMemo(() => getCurrentBankBalance(), [getCurrentBankBalance]);
   const expensesByCategory = React.useMemo(() => getExpensesByCategory(), [getExpensesByCategory]);
-  const spendingOverTime = React.useMemo(() => getSpendingOverTime('month'), [getSpendingOverTime]); // Get monthly data
+  const spendingOverTime = React.useMemo(() => getSpendingOverTime('month'), [getSpendingOverTime]);
 
 
   return (
@@ -105,7 +108,9 @@ export default function DashboardPage() {
         <DashboardSummary
             totalIncome={totalIncome}
             totalExpenses={totalExpenses}
-            currentBankBalance={currentBankBalance} // Pass current balance
+            currentBankBalance={currentBankBalance}
+            startingBalance={startingBalance} // Pass starting balance
+            onUpdateStartingBalance={updateStartingBalance} // Pass update function
             isLoading={!isLoaded}
         />
 

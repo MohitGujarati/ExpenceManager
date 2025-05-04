@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
@@ -15,6 +16,11 @@ const loadFromLocalStorage = <T>(key: string, defaultValue: T): T => {
     if (key === 'transactions' && item) {
       const parsed = JSON.parse(item) as Transaction[];
       return parsed.map(tx => ({ ...tx, date: new Date(tx.date) })) as T;
+    }
+    // Ensure startingBalance is a number
+    if (key === 'startingBalance' && item) {
+        const parsed = JSON.parse(item);
+        return typeof parsed === 'number' ? parsed : defaultValue;
     }
     return item ? JSON.parse(item) : defaultValue;
   } catch (error) {
@@ -39,11 +45,14 @@ const saveToLocalStorage = <T>(key: string, value: T): void => {
 export function useBudgetData() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [budgetGoals, setBudgetGoals] = useState<BudgetGoal[]>([]);
-   const [isLoaded, setIsLoaded] = useState(false); // Track initial load
+  const [startingBalance, setStartingBalanceState] = useState<number>(0); // Renamed state setter
+  const [isLoaded, setIsLoaded] = useState(false); // Track initial load
 
   // Load initial data from localStorage on mount
   useEffect(() => {
     setTransactions(loadFromLocalStorage<Transaction[]>('transactions', []));
+    setStartingBalanceState(loadFromLocalStorage<number>('startingBalance', 0)); // Load starting balance
+
     // Ensure budget goals are initialized for all categories if not present
     const loadedGoals = loadFromLocalStorage<BudgetGoal[]>('budgetGoals', []);
     const allCategoryIds = categories.map(c => c.id);
@@ -69,6 +78,12 @@ export function useBudgetData() {
      }
   }, [budgetGoals, isLoaded]);
 
+  useEffect(() => {
+     if (isLoaded) {
+        saveToLocalStorage('startingBalance', startingBalance);
+     }
+  }, [startingBalance, isLoaded]);
+
 
   const addTransaction = useCallback((transaction: Omit<Transaction, 'id'>) => {
     const newTransaction = { ...transaction, id: crypto.randomUUID() };
@@ -86,6 +101,12 @@ export function useBudgetData() {
         )
     );
   }, []);
+
+  // Renamed function to avoid conflict with state variable
+  const updateStartingBalance = useCallback((newStartingBalance: number) => {
+      setStartingBalanceState(newStartingBalance);
+  }, []);
+
 
    const getTotalIncome = useCallback((month?: Date) => {
     const targetMonth = month ? month.getMonth() : new Date().getMonth();
@@ -152,7 +173,7 @@ export function useBudgetData() {
       return data;
   }, [transactions]);
 
-  // Calculate current bank balance based on *all* transactions
+  // Calculate current bank balance based on starting balance and *all* transactions since then
   const getCurrentBankBalance = useCallback(() => {
     const totalIncomeAllTime = transactions
       .filter(t => t.type === 'income')
@@ -160,13 +181,15 @@ export function useBudgetData() {
     const totalExpensesAllTime = transactions
       .filter(t => t.type === 'expense')
       .reduce((sum, t) => sum + t.amount, 0);
-    return totalIncomeAllTime - totalExpensesAllTime;
-  }, [transactions]);
+    return startingBalance + totalIncomeAllTime - totalExpensesAllTime;
+  }, [transactions, startingBalance]);
 
 
   return {
     transactions,
     budgetGoals,
+    startingBalance, // Expose starting balance
+    updateStartingBalance, // Expose function to update it
     addTransaction,
     deleteTransaction,
     updateBudgetGoal,
@@ -174,9 +197,9 @@ export function useBudgetData() {
     getTotalExpenses,
     getExpensesByCategory,
     getSpendingOverTime,
-    getCurrentBankBalance, // Expose the new function
+    getCurrentBankBalance,
     categories,
     getCategoryById,
-    isLoaded, // Expose loading state
+    isLoaded,
   };
 }
