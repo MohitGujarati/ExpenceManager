@@ -21,7 +21,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"; // Import Card components
+} from "@/components/ui/card";
 import { PlusCircle, Settings } from "lucide-react";
 import { useBudgetData } from "@/hooks/use-budget-data";
 import { AddTransactionForm } from "@/components/add-transaction-form";
@@ -43,6 +43,7 @@ export default function DashboardPage() {
     getTotalExpenses,
     getExpensesByCategory,
     getSpendingOverTime,
+    getCurrentBankBalance, // Get the new function
     isLoaded, // Use the loading state
   } = useBudgetData();
 
@@ -52,6 +53,7 @@ export default function DashboardPage() {
   // Memoize calculations to avoid re-computation on every render
   const totalIncome = React.useMemo(() => getTotalIncome(), [getTotalIncome]);
   const totalExpenses = React.useMemo(() => getTotalExpenses(), [getTotalExpenses]);
+  const currentBankBalance = React.useMemo(() => getCurrentBankBalance(), [getCurrentBankBalance]); // Calculate current balance
   const expensesByCategory = React.useMemo(() => getExpensesByCategory(), [getExpensesByCategory]);
   const spendingOverTime = React.useMemo(() => getSpendingOverTime('month'), [getSpendingOverTime]); // Get monthly data
 
@@ -103,6 +105,7 @@ export default function DashboardPage() {
         <DashboardSummary
             totalIncome={totalIncome}
             totalExpenses={totalExpenses}
+            currentBankBalance={currentBankBalance} // Pass current balance
             isLoading={!isLoaded}
         />
 

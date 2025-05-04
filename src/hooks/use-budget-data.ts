@@ -44,7 +44,15 @@ export function useBudgetData() {
   // Load initial data from localStorage on mount
   useEffect(() => {
     setTransactions(loadFromLocalStorage<Transaction[]>('transactions', []));
-    setBudgetGoals(loadFromLocalStorage<BudgetGoal[]>('budgetGoals', categories.map(c => ({ categoryId: c.id, amount: 0 }))));
+    // Ensure budget goals are initialized for all categories if not present
+    const loadedGoals = loadFromLocalStorage<BudgetGoal[]>('budgetGoals', []);
+    const allCategoryIds = categories.map(c => c.id);
+    const updatedGoals = allCategoryIds.map(id => {
+        const existingGoal = loadedGoals.find(g => g.categoryId === id);
+        return existingGoal || { categoryId: id, amount: 0 };
+    });
+    setBudgetGoals(updatedGoals);
+
     setIsLoaded(true); // Mark as loaded after initial fetch
   }, []);
 
@@ -73,9 +81,9 @@ export function useBudgetData() {
 
   const updateBudgetGoal = useCallback((categoryId: string, amount: number) => {
     setBudgetGoals((prev) =>
-      prev.map((goal) =>
-        goal.categoryId === categoryId ? { ...goal, amount: Math.max(0, amount) } : goal // Ensure amount is not negative
-      )
+        prev.map((goal) =>
+            goal.categoryId === categoryId ? { ...goal, amount: Math.max(0, amount) } : goal // Ensure amount is not negative
+        )
     );
   }, []);
 
@@ -144,6 +152,17 @@ export function useBudgetData() {
       return data;
   }, [transactions]);
 
+  // Calculate current bank balance based on *all* transactions
+  const getCurrentBankBalance = useCallback(() => {
+    const totalIncomeAllTime = transactions
+      .filter(t => t.type === 'income')
+      .reduce((sum, t) => sum + t.amount, 0);
+    const totalExpensesAllTime = transactions
+      .filter(t => t.type === 'expense')
+      .reduce((sum, t) => sum + t.amount, 0);
+    return totalIncomeAllTime - totalExpensesAllTime;
+  }, [transactions]);
+
 
   return {
     transactions,
@@ -155,6 +174,7 @@ export function useBudgetData() {
     getTotalExpenses,
     getExpensesByCategory,
     getSpendingOverTime,
+    getCurrentBankBalance, // Expose the new function
     categories,
     getCategoryById,
     isLoaded, // Expose loading state
