@@ -23,7 +23,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { PlusCircle, Settings, Lightbulb } from "lucide-react"; // Added Lightbulb
+import { PlusCircle, Settings } from "lucide-react"; // Removed Lightbulb
 import { useBudgetData } from "@/hooks/use-budget-data";
 import { AddTransactionForm } from "@/components/add-transaction-form";
 import { DashboardSummary } from "@/components/dashboard-summary";
@@ -32,12 +32,11 @@ import { SpendingTrendsChart } from "@/components/spending-trends-chart";
 import { TransactionList } from "@/components/transaction-list";
 import { BudgetGoalSettings } from "@/components/budget-goal-settings";
 import { BudgetProgress } from "@/components/budget-progress";
-import { FinancialTipsDisplay } from "@/components/financial-tips-display"; // Import the new component
-import { getFinancialTips } from "@/ai/flows/get-financial-tips-flow"; // Import the AI flow
-import type { GetFinancialTipsInput, GetFinancialTipsOutput } from "@/ai/flows/get-financial-tips-flow"; // Import types
-import { useToast } from "@/hooks/use-toast";
-import { Skeleton } from "@/components/ui/skeleton";
-import { getCategoryById } from "@/lib/categories";
+// Removed FinancialTipsDisplay import
+// Removed AI flow imports
+import { useToast } from "@/hooks/use-toast"; // Keep useToast if other parts use it
+import { Skeleton } from "@/components/ui/skeleton"; // Keep Skeleton if other parts use it
+// import { getCategoryById } from "@/lib/categories"; // Keep if needed, otherwise remove
 
 export default function DashboardPage() {
   const {
@@ -55,84 +54,29 @@ export default function DashboardPage() {
     getCurrentBankBalance,
     isLoaded,
   } = useBudgetData();
-  const { toast } = useToast();
+  const { toast } = useToast(); // Keep toast if needed
 
   const [isAddTransactionOpen, setIsAddTransactionOpen] = React.useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
-  const [financialTips, setFinancialTips] = React.useState<string | null>(null); // State for tips
-  const [isTipsLoading, setIsTipsLoading] = React.useState(false); // State for loading tips
+  // Removed financialTips and isTipsLoading state
   const [activeTab, setActiveTab] = React.useState("overview");
 
   // Memoize calculations to avoid re-computation on every render
-  const totalIncome = React.useMemo(() => getTotalIncome(), [getTotalIncome, transactions]); // Add transactions dependency
-  const totalExpenses = React.useMemo(() => getTotalExpenses(), [getTotalExpenses, transactions]); // Add transactions dependency
-  const currentBankBalance = React.useMemo(() => getCurrentBankBalance(), [getCurrentBankBalance, transactions, startingBalance]); // Add dependencies
-  const expensesByCategory = React.useMemo(() => getExpensesByCategory(), [getExpensesByCategory, transactions]); // Add transactions dependency
-  const spendingOverTime = React.useMemo(() => getSpendingOverTime('month'), [getSpendingOverTime, transactions]); // Add transactions dependency
+  const totalIncome = React.useMemo(() => getTotalIncome(), [getTotalIncome, transactions]);
+  const totalExpenses = React.useMemo(() => getTotalExpenses(), [getTotalExpenses, transactions]);
+  const currentBankBalance = React.useMemo(() => getCurrentBankBalance(), [getCurrentBankBalance, transactions, startingBalance]);
+  const expensesByCategory = React.useMemo(() => getExpensesByCategory(), [getExpensesByCategory, transactions]);
+  const spendingOverTime = React.useMemo(() => getSpendingOverTime('month'), [getSpendingOverTime, transactions]);
 
-  // Function to generate financial tips
-  const generateTips = React.useCallback(async () => {
-    if (!isLoaded) return; // Don't run if data isn't loaded
+  // Removed generateTips function
+  // Removed handleTabChange logic related to tips
 
-    setIsTipsLoading(true);
-    setFinancialTips(null); // Clear previous tips
-
-    const inputData: GetFinancialTipsInput = {
-      transactions: transactions.slice(0, 50), // Limit transactions sent for performance/token limits
-      budgetGoals,
-      currentBankBalance,
-      startingBalance,
-      totalIncome,
-      totalExpenses,
-    };
-
-    try {
-      console.log("Sending data to AI:", inputData); // Log input data
-      const result: GetFinancialTipsOutput = await getFinancialTips(inputData);
-      console.log("Received AI tips:", result); // Log output data
-      setFinancialTips(result.tips);
-       toast({
-         title: "Financial Tips Generated",
-         description: "AI has provided some insights!",
-       });
-    } catch (error) {
-       console.error("Error generating financial tips:", error);
-       toast({
-         title: "Error Generating Tips",
-         description: "Could not generate financial tips. Please try again later.",
-         variant: "destructive",
-       });
-       setFinancialTips("Sorry, I couldn't generate tips right now. Please ensure your API key is correctly configured and try again."); // Provide user feedback on error
-    } finally {
-      setIsTipsLoading(false);
-    }
-  }, [
-    isLoaded,
-    transactions,
-    budgetGoals,
-    currentBankBalance,
-    startingBalance,
-    totalIncome,
-    totalExpenses,
-    toast
-  ]);
-
-  // Updated handleTabChange to include tips generation logic
   const handleTabChange = (value: string) => {
     setActiveTab(value);
-    // Generate tips when switching to the tips tab if not already loaded/loading
-    if (value === "tips" && !financialTips && !isTipsLoading && isLoaded) {
-      generateTips();
-    }
+    // Removed tips generation logic
   };
 
-   // Generate tips on initial load if the app starts on the tips tab (optional)
-   // React.useEffect(() => {
-   //   if (activeTab === "tips" && isLoaded && !financialTips && !isTipsLoading) {
-   //     generateTips();
-   //   }
-   // }, [activeTab, isLoaded, financialTips, isTipsLoading, generateTips]);
-
+  // Removed useEffect related to tips generation
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
@@ -182,21 +126,18 @@ export default function DashboardPage() {
             totalIncome={totalIncome}
             totalExpenses={totalExpenses}
             currentBankBalance={currentBankBalance}
-            startingBalance={startingBalance} // Pass starting balance
-            onUpdateStartingBalance={updateStartingBalance} // Pass update function
+            startingBalance={startingBalance}
+            onUpdateStartingBalance={updateStartingBalance}
             isLoading={!isLoaded}
         />
 
-        {/* Tabs for Overview, Transactions, Budget, Tips */}
+        {/* Tabs for Overview, Transactions, Budget */}
          <Tabs defaultValue="overview" value={activeTab} onValueChange={handleTabChange}>
-             <TabsList className="grid w-full grid-cols-4"> {/* Adjusted grid cols to 4 */}
+             <TabsList className="grid w-full grid-cols-3"> {/* Adjusted grid cols to 3 */}
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="transactions">Transactions</TabsTrigger>
               <TabsTrigger value="budget">Budget</TabsTrigger>
-              <TabsTrigger value="tips">
-                  <Lightbulb className="mr-1 h-4 w-4" />
-                 AI Tips
-              </TabsTrigger>
+              {/* Removed AI Tips TabTrigger */}
             </TabsList>
 
              {/* Overview Tab */}
@@ -245,14 +186,7 @@ export default function DashboardPage() {
                  </div>
             </TabsContent>
 
-             {/* Tips Tab Content */}
-             <TabsContent value="tips">
-                <FinancialTipsDisplay
-                  tips={financialTips}
-                  isLoading={isTipsLoading || !isLoaded} // Show loading if data isn't loaded OR tips are loading
-                  onRegenerate={generateTips}
-                />
-            </TabsContent>
+             {/* Removed Tips Tab Content */}
 
          </Tabs>
       </main>
