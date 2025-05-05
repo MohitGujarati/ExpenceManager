@@ -23,7 +23,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { PlusCircle, Settings } from "lucide-react"; // Removed Lightbulb
+import { PlusCircle, Settings, AlertCircle } from "lucide-react";
 import { useBudgetData } from "@/hooks/use-budget-data";
 import { AddTransactionForm } from "@/components/add-transaction-form";
 import { DashboardSummary } from "@/components/dashboard-summary";
@@ -32,8 +32,6 @@ import { SpendingTrendsChart } from "@/components/spending-trends-chart";
 import { TransactionList } from "@/components/transaction-list";
 import { BudgetGoalSettings } from "@/components/budget-goal-settings";
 import { BudgetProgress } from "@/components/budget-progress";
-// Removed FinancialTipsDisplay import
-// Removed AI flow imports
 import {
   Select,
   SelectContent,
@@ -41,12 +39,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast"; // Keep useToast if other parts use it
-import { Skeleton } from "@/components/ui/skeleton"; // Keep Skeleton if other parts use it
-// import { getCategoryById } from "@/lib/categories"; // Keep if needed, otherwise remove
+import { useToast } from "@/hooks/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useAuth } from "@/context/AuthContext"; // Import useAuth
+import { LoginButton } from "@/components/auth/LoginButton"; // Import LoginButton
+import { LogoutButton } from "@/components/auth/LogoutButton"; // Import LogoutButton
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"; // Import Avatar
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+
 
 export default function DashboardPage() {
-  const {
+   const { user, loading: authLoading } = useAuth(); // Get user and loading state
+   const {
     transactions,
     budgetGoals,
     startingBalance,
@@ -61,32 +65,28 @@ export default function DashboardPage() {
     getSpendingOverTime,
     getCurrentBankBalance,
     isLoaded,
-  } = useBudgetData();
-  const { toast } = useToast(); // Keep toast if needed
+  } = useBudgetData(user?.uid); // Pass user ID to the hook
+  const { toast } = useToast();
 
   const [isAddTransactionOpen, setIsAddTransactionOpen] = React.useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
-  const [selectedCategory, setSelectedCategory] = React.useState<string | undefined>(undefined); // Add 'undefined' to the type
-  // Removed financialTips and isTipsLoading state
+  const [selectedCategory, setSelectedCategory] = React.useState<string | undefined>(undefined);
   const [activeTab, setActiveTab] = React.useState("overview");
 
   // Memoize calculations to avoid re-computation on every render
-  const totalIncome = React.useMemo(() => getTotalIncome(), [getTotalIncome, transactions]);
-  const totalExpenses = React.useMemo(() => getTotalExpenses(), [getTotalExpenses, transactions]);
-  const currentBankBalance = React.useMemo(() => getCurrentBankBalance(), [getCurrentBankBalance, transactions, startingBalance]);
-  const expensesByCategory = React.useMemo(() => getExpensesByCategory(), [getExpensesByCategory, transactions]);
-  const spendingOverTime = React.useMemo(() => getSpendingOverTime('month'), [getSpendingOverTime, transactions]);
+   // Add dependencies on user to recalculate when user changes
+  const totalIncome = React.useMemo(() => getTotalIncome(), [getTotalIncome, transactions, user]);
+  const totalExpenses = React.useMemo(() => getTotalExpenses(), [getTotalExpenses, transactions, user]);
+  const currentBankBalance = React.useMemo(() => getCurrentBankBalance(), [getCurrentBankBalance, transactions, startingBalance, user]);
+  const expensesByCategory = React.useMemo(() => getExpensesByCategory(), [getExpensesByCategory, transactions, user]);
+  const spendingOverTime = React.useMemo(() => getSpendingOverTime('month'), [getSpendingOverTime, transactions, user]);
 
-  // Removed generateTips function
-  // Removed handleTabChange logic related to tips
 
   const handleTabChange = (value: string) => {
     setActiveTab(value);
-    // Removed tips generation logic
   };
 
    const filteredTransactions = React.useMemo(() => {
-      // Ensure transactions is always an array
      const validTransactions = Array.isArray(transactions) ? transactions : [];
      return selectedCategory
        ? validTransactions.filter((transaction) => transaction.categoryId === selectedCategory)
@@ -94,47 +94,83 @@ export default function DashboardPage() {
    }, [transactions, selectedCategory]);
 
 
-  // Removed useEffect related to tips generation
+  // Render loading state or login prompt if not authenticated
+   if (authLoading) {
+     return (
+        <div className="flex min-h-screen w-full flex-col items-center justify-center bg-muted/40 p-4">
+            <Skeleton className="h-16 w-1/2 mb-4" />
+            <Skeleton className="h-8 w-1/4" />
+        </div>
+     );
+   }
 
+  if (!user) {
+     return (
+         <div className="flex min-h-screen w-full flex-col items-center justify-center bg-muted/40 p-4 gap-6 text-center">
+             <Alert className="max-w-md">
+                 <AlertCircle className="h-4 w-4" />
+                 <AlertTitle>Welcome to BudgetView!</AlertTitle>
+                 <AlertDescription>
+                     Please log in with your Google account to manage your budget and track your expenses.
+                 </AlertDescription>
+             </Alert>
+             <LoginButton />
+         </div>
+     );
+   }
+
+  // Render dashboard if user is logged in
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
       {/* Header */}
-      <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6 py-4">
+      <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6 py-4">
         <h1 className="text-xl font-semibold">BudgetView Dashboard</h1>
-         <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
-            <DialogTrigger asChild>
-               <Button size="icon" variant="outline" className="ml-auto h-8 w-8">
-                 <Settings className="h-4 w-4" />
-                 <span className="sr-only">Settings</span>
-               </Button>
-            </DialogTrigger>
-             <DialogContent>
-                 <DialogHeader>
-                    <DialogTitle>Settings</DialogTitle>
-                 </DialogHeader>
-                 <BudgetGoalSettings
-                     budgetGoals={budgetGoals}
-                     onUpdateGoal={updateBudgetGoal}
-                 />
-            </DialogContent>
-         </Dialog>
-        <Dialog open={isAddTransactionOpen} onOpenChange={setIsAddTransactionOpen}>
-            <DialogTrigger asChild>
-                <Button size="sm" className="gap-1">
-                    <PlusCircle className="h-4 w-4" />
-                    Add Transaction
-                </Button>
-            </DialogTrigger>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Add New Transaction</DialogTitle>
-                </DialogHeader>
-                <AddTransactionForm
-                  onSubmit={addTransaction}
-                  onClose={() => setIsAddTransactionOpen(false)}
-                />
-            </DialogContent>
-        </Dialog>
+        <div className="ml-auto flex items-center gap-4">
+             {/* Settings Dialog */}
+             <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
+                 <DialogTrigger asChild>
+                     <Button size="icon" variant="outline" className="h-8 w-8">
+                         <Settings className="h-4 w-4" />
+                         <span className="sr-only">Settings</span>
+                     </Button>
+                 </DialogTrigger>
+                 <DialogContent>
+                     <DialogHeader>
+                         <DialogTitle>Settings</DialogTitle>
+                     </DialogHeader>
+                     <BudgetGoalSettings
+                         budgetGoals={budgetGoals}
+                         onUpdateGoal={updateBudgetGoal}
+                     />
+                 </DialogContent>
+             </Dialog>
+             {/* Add Transaction Dialog */}
+             <Dialog open={isAddTransactionOpen} onOpenChange={setIsAddTransactionOpen}>
+                 <DialogTrigger asChild>
+                     <Button size="sm" className="gap-1">
+                         <PlusCircle className="h-4 w-4" />
+                         Add Transaction
+                     </Button>
+                 </DialogTrigger>
+                 <DialogContent>
+                     <DialogHeader>
+                         <DialogTitle>Add New Transaction</DialogTitle>
+                     </DialogHeader>
+                     <AddTransactionForm
+                         onSubmit={addTransaction}
+                         onClose={() => setIsAddTransactionOpen(false)}
+                     />
+                 </DialogContent>
+             </Dialog>
+              {/* User Avatar and Logout */}
+              <div className="flex items-center gap-2">
+                 <Avatar className="h-8 w-8">
+                     <AvatarImage src={user.photoURL ?? undefined} alt={user.displayName ?? 'User'} />
+                     <AvatarFallback>{user.displayName?.charAt(0).toUpperCase() ?? user.email?.charAt(0).toUpperCase() ?? 'U'}</AvatarFallback>
+                 </Avatar>
+                 <LogoutButton />
+              </div>
+        </div>
       </header>
 
       {/* Main Content */}
@@ -151,11 +187,10 @@ export default function DashboardPage() {
 
         {/* Tabs for Overview, Transactions, Budget */}
          <Tabs defaultValue="overview" value={activeTab} onValueChange={handleTabChange}>
-             <TabsList className="grid w-full grid-cols-3"> {/* Adjusted grid cols to 3 */}
+             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="transactions">Transactions</TabsTrigger>
               <TabsTrigger value="budget">Budget</TabsTrigger>
-              {/* Removed AI Tips TabTrigger */}
             </TabsList>
 
              {/* Overview Tab */}
@@ -183,7 +218,7 @@ export default function DashboardPage() {
                       <div className="ml-auto w-full max-w-[180px] flex-shrink-0">
                          <Select
                            onValueChange={(value) => setSelectedCategory(value === 'all' ? undefined : value)}
-                           value={selectedCategory || 'all'} // Set value to 'all' when selectedCategory is undefined
+                           value={selectedCategory || 'all'}
                          >
                            <SelectTrigger className="w-full">
                              <SelectValue placeholder="Filter by category" />
@@ -193,7 +228,7 @@ export default function DashboardPage() {
                              {categories.map((category) => (
                                 <SelectItem key={category.id} value={category.id}>
                                     <div className="flex items-center gap-2">
-                                      <category.icon className="h-4 w-4" />
+                                      {category.icon && <category.icon className="h-4 w-4" />}
                                        {category.name}
                                     </div>
                                 </SelectItem>
@@ -211,7 +246,6 @@ export default function DashboardPage() {
                    </CardContent>
                </Card>
             </TabsContent>
-
 
             {/* Budget Tab */}
             <TabsContent value="budget">
@@ -233,12 +267,8 @@ export default function DashboardPage() {
                      </Card>
                  </div>
             </TabsContent>
-
-             {/* Removed Tips Tab Content */}
-
          </Tabs>
       </main>
     </div>
   );
 }
-
