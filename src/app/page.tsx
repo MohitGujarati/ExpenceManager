@@ -34,6 +34,13 @@ import { BudgetGoalSettings } from "@/components/budget-goal-settings";
 import { BudgetProgress } from "@/components/budget-progress";
 // Removed FinancialTipsDisplay import
 // Removed AI flow imports
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast"; // Keep useToast if other parts use it
 import { Skeleton } from "@/components/ui/skeleton"; // Keep Skeleton if other parts use it
 // import { getCategoryById } from "@/lib/categories"; // Keep if needed, otherwise remove
@@ -44,6 +51,7 @@ export default function DashboardPage() {
     budgetGoals,
     startingBalance,
     updateStartingBalance,
+    categories,
     addTransaction,
     deleteTransaction,
     updateBudgetGoal,
@@ -58,6 +66,7 @@ export default function DashboardPage() {
 
   const [isAddTransactionOpen, setIsAddTransactionOpen] = React.useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
+  const [selectedCategory, setSelectedCategory] = React.useState<string | undefined>(undefined); // Add 'undefined' to the type
   // Removed financialTips and isTipsLoading state
   const [activeTab, setActiveTab] = React.useState("overview");
 
@@ -75,6 +84,15 @@ export default function DashboardPage() {
     setActiveTab(value);
     // Removed tips generation logic
   };
+
+   const filteredTransactions = React.useMemo(() => {
+      // Ensure transactions is always an array
+     const validTransactions = Array.isArray(transactions) ? transactions : [];
+     return selectedCategory
+       ? validTransactions.filter((transaction) => transaction.categoryId === selectedCategory)
+       : validTransactions;
+   }, [transactions, selectedCategory]);
+
 
   // Removed useEffect related to tips generation
 
@@ -154,16 +172,48 @@ export default function DashboardPage() {
 
             {/* Transactions Tab */}
             <TabsContent value="transactions">
-                 <Card>
-                     <CardHeader>
-                         <CardTitle>Recent Transactions</CardTitle>
-                         <CardDescription>View and manage your income and expenses.</CardDescription>
-                     </CardHeader>
-                     <CardContent>
-                        <TransactionList transactions={transactions} onDelete={deleteTransaction} maxHeight="500px" />
-                    </CardContent>
-                </Card>
+               <Card>
+                  <CardHeader className="pb-4 flex flex-row items-start justify-between">
+                     <div>
+                        <CardTitle>Recent Transactions</CardTitle>
+                        <CardDescription className="max-w-lg text-balance leading-relaxed pt-2">
+                           View and manage your income and expenses. Use the category filter
+                           to display only transactions from a specific category and focus
+                           on what matters most.
+                        </CardDescription>
+                      </div>
+                      <div className="ml-auto w-full max-w-[180px] flex-shrink-0">
+                         <Select
+                           onValueChange={(value) => setSelectedCategory(value === 'all' ? undefined : value)}
+                           value={selectedCategory || 'all'} // Set value to 'all' when selectedCategory is undefined
+                         >
+                           <SelectTrigger className="w-full">
+                             <SelectValue placeholder="Filter by category" />
+                           </SelectTrigger>
+                           <SelectContent>
+                             <SelectItem value="all">All Categories</SelectItem>
+                             {categories.map((category) => (
+                                <SelectItem key={category.id} value={category.id}>
+                                    <div className="flex items-center gap-2">
+                                      <category.icon className="h-4 w-4" />
+                                       {category.name}
+                                    </div>
+                                </SelectItem>
+                             ))}
+                           </SelectContent>
+                         </Select>
+                      </div>
+                   </CardHeader>
+                    <CardContent>
+                       <TransactionList
+                          transactions={filteredTransactions}
+                          onDelete={deleteTransaction}
+                          maxHeight="500px"
+                       />
+                   </CardContent>
+               </Card>
             </TabsContent>
+
 
             {/* Budget Tab */}
             <TabsContent value="budget">
