@@ -177,9 +177,7 @@ export default function DashboardPage() {
                      <div>
                         <CardTitle>Recent Transactions</CardTitle>
                         <CardDescription className="max-w-lg text-balance leading-relaxed pt-2">
-                           View and manage your income and expenses. Use the category filter
-                           to display only transactions from a specific category and focus
-                           on what matters most.
+                           View and manage your income and expenses. Use the category filter to display only transactions from a specific category and focus on what matters most.
                         </CardDescription>
                       </div>
                       <div className="ml-auto w-full max-w-[180px] flex-shrink-0">
@@ -243,3 +241,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+
